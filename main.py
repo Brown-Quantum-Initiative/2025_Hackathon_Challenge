@@ -1,16 +1,15 @@
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit_ibm_runtime.fake_provider import FakeFez
-from qiskit.qasm2 import QASM2ParseError
-
+import qiskit.qasm3
 import numpy as np
 import matplotlib
 import re
 
 from pathlib import Path
-from google.colab import drive
+from math import inf
 
 class OptimizedTranspiler:
-    def __init__(self, backend, basis_gates, seed_range):
+    def __init__(self, backend=None, basis_gates=None, seed_range=None):
         """
         An optimized transpiler class that allows you to configure seed and gate basis settings.
         Param backend: set the transpiler backend, default = FakeFez()
@@ -51,6 +50,7 @@ class OptimizedTranspiler:
             out[name] = two_qubit_gates
 
         return out
+
     def try_seeds(self, circuit, gates=None, seed=None):
         """
         Transpile the given circuit on all possible given seeds.
@@ -102,7 +102,57 @@ class OptimizedTranspiler:
 
     def two_qubit_gate_count(self, circuit):
         """
+        Get two qubit gate count.
         """
         ops = circuit.count_ops()
         twoq_gates = ["cx", "cz", "iswap", "ecr", "rzz"]
         return sum(ops.get(g, 0) for g in twoq_gates)
+
+def robust_load_qasm(path: Path) -> QuantumCircuit:
+    """
+    Load a QASM file, auto-inserting missing header/qreg if needed.
+    - Ensures OPENQASM 2.0 + include "qelib1.inc";
+    - If no qreg is present, infers number of qubits from q[<idx>] usage
+      and inserts 'qreg q[N];'.
+    """
+    path = Path(path)
+    text = path.read_text()
+
+    # Ensure header
+    if "OPENQASM" not in text:
+        header = 'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
+        text = header + text
+    elif 'include "qelib1.inc";' not in text:
+        # Make sure we have the standard include
+        first_newline = text.find("\n")
+        if first_newline == -1:
+            first_newline = len(text)
+        text = text[:first_newline+1] + 'include "qelib1.inc";\n' + text[first_newline+1:]
+
+    # If there's no qreg, infer from q[<idx>] usage
+    if "qreg" not in text:
+        indices = [int(m.group(1)) for m in re.finditer(r"q\[(\d+)\]", text)]
+        n_qubits = max(indices) + 1 if indices else 1
+
+        # Insert qreg after the include line if possible
+        insert_pos = text.find('include "qelib1.inc";')
+        if insert_pos != -1:
+            insert_pos = text.find("\n", insert_pos) + 1
+        else:
+            # Fallback: after the first line
+            insert_pos = text.find("\n") + 1
+
+        text = text[:insert_pos] + f"qreg q[{n_qubits}];\n" + text[insert_pos:]
+
+    # Now parse via Qiskit
+    return QuantumCircuit.from_qasm_str(text)
+
+
+ot = OptimizedTranspiler()
+qc1 = robust_load_qasm("big_circuits/1.qasm")
+qc2 = robust_load_qasm("big_circuits/2.qasm")
+qc3 = robust_load_qasm("big_circuits/3.qasm")
+
+qc1_seed = ot.try_seeds(circuit=qc1, seed=(0,1))
+qc2_seed = ot.try_seeds(circuit=qc2, seed=(0,1))
+qc3_seed = ot.try_seeds(circuit=qc3, seed=(0,1))
