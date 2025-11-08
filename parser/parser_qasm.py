@@ -1,3 +1,4 @@
+import copy
 import re
 
 def get_bit_info(bit):
@@ -16,13 +17,14 @@ class QASM_Parser:
         self.gates = []
         self.bits = {}
         self.links = []
-        self.timestamps = []
+        self.timestamps = {}
 
     def get_bits(self):
         with open(self.qasm_file, 'r') as file:
             self.qasm_code = file.read()
         
         for raw_line in self.qasm_code.split('\n'):
+            graph_updated = False
             line = raw_line.split('//')[0].strip()
             if not line:
                 continue
@@ -49,6 +51,10 @@ class QASM_Parser:
 
     def get_gates(self):
         
+        line_counter = 0
+        current_graph = {"nodes": list(self.bits.values()), "edges": []}
+        self.timestamps[0] = copy.deepcopy(current_graph)
+
         for raw_line in self.qasm_code.split('\n'):
             line = raw_line.split('//')[0].strip()
             if not line:
@@ -60,9 +66,18 @@ class QASM_Parser:
             if line.startswith('qreg'): continue
             if line.startswith('creg'): continue
             # Remove comments and strip line
-            
+
+            line_counter += 1
+
+            # ------------------------------------------------
+            # gates with inputs: one-qubit gate, two-qubit gate
+            # ------------------------------------------------
             if "(" in line and ")" in line:
                 parts = re.split(r'[()]', line)
+
+                # ------------------------------------------------
+                # one-qubit gate
+                # ------------------------------------------------
                 if len(parts) == 3:
                     gate_type = "one_quit_gate"
                     gate_name = parts[0]
@@ -81,7 +96,6 @@ class QASM_Parser:
 
                     self.gate_id_counter += 1
                     
-                    
                     last_gate_connected = self.bits[f"{letter}{number}"]["last_gate_connected"]
                     if last_gate_connected is None:
                         source = f"{letter}{number}"
@@ -91,6 +105,18 @@ class QASM_Parser:
                     self.links.append({"source": source, "target": gate_id})
                     self.bits[f"{letter}{number}"]["last_gate_connected"] = gate_id   
             
+                    # ------------------------------------------------
+                    current_graph["nodes"].append({"id": gate_id, 
+                                                        "type": gate_type, 
+                                                        "name": gate_name, 
+                                                        "gate_info": gate_info})
+                    current_graph["edges"].append({"source": source, "target": gate_id})
+                    graph_updated = True
+                    # ------------------------------------------------
+
+                # ------------------------------------------------
+                # two-qubit gate
+                # ------------------------------------------------
                 elif len(parts) == 4:
                     gate_type = "two_qubit_gate"
                     gate_name = parts[0]
@@ -123,10 +149,27 @@ class QASM_Parser:
                     self.bits[f"{letter1}{number1}"]["last_gate_connected"] = gate_id
                     self.bits[f"{letter2}{number2}"]["last_gate_connected"] = gate_id
                     
+                    # ------------------------------------------------
+                    current_graph["nodes"].append({"id": gate_id, 
+                                                        "type": gate_type, 
+                                                        "name": gate_name, 
+                                                        "gate_info": gate_info})
+                    current_graph["edges"].append({"source": source1, "target": gate_id})
+                    current_graph["edges"].append({"source": source2, "target": gate_id})
+                    graph_updated = True
+                    # ------------------------------------------------
+    
                 else:
                     continue
+            # ------------------------------------------------
+            # gates without inputs: single-qubit gate, two-qubit gate
+            # ------------------------------------------------
             else: 
                 parts = re.split(r'[,\s]+', line)
+
+                # ------------------------------------------------
+                # single-qubit gate
+                # ------------------------------------------------
                 if len(parts) == 2: 
                     gate_type = "single_qubit_gate"
                     gate_name = parts[0]
@@ -150,8 +193,19 @@ class QASM_Parser:
                     self.links.append({"source": source, 
                                         "target": gate_id})
                     self.bits[f"{letter}{number}"]["last_gate_connected"] = gate_id
-                    
 
+                    # ------------------------------------------------
+                    current_graph["nodes"].append({"id": gate_id, 
+                                                        "type": gate_type, 
+                                                        "name": gate_name, 
+                                                        })
+                    current_graph["edges"].append({"source": source, "target": gate_id})
+                    graph_updated = True
+                    # ------------------------------------------------
+
+                # ------------------------------------------------
+                # two-qubit gate
+                # ------------------------------------------------
                 elif len(parts) == 3:
                     gate_type = "two_qubit_gate"
                     gate_name = parts[0]
@@ -180,19 +234,28 @@ class QASM_Parser:
                     self.links.append({"source": source2, "target": gate_id})
                     self.bits[f"{letter1}{number1}"]["last_gate_connected"] = gate_id
                     self.bits[f"{letter2}{number2}"]["last_gate_connected"] = gate_id
+
+                    # ------------------------------------------------
+                    current_graph["nodes"].append({"id": gate_id, 
+                                                        "type": gate_type, 
+                                                        "name": gate_name, 
+                                                        })
+                    current_graph["edges"].append({"source": source1, "target": gate_id})
+                    current_graph["edges"].append({"source": source2, "target": gate_id})
+                    graph_updated = True
+                    # ------------------------------------------------
                     
                 else:
                     continue 
-                    
-                
-                
 
-            
+            if graph_updated:
+                self.timestamps[line_counter] = copy.deepcopy(current_graph)
+                
+                
+                
 
 
 if __name__ == "__main__":
     parser = QASM_Parser("parser/5.qasm")
     parser.get_bits()
     parser.get_gates()
-    print(parser.bits)
-    print(parser.links)
