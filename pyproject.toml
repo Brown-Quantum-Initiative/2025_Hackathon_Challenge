@@ -5,4 +5,5 @@ description = "Help Bruno survive the tasks from Professor CNOTworthy"
 requires-python = ">=3.12"
 dependencies = [
     "qiskit>=2.2.3",
+    "qiskit-ibm-runtime>=0.43.1",
 ]
