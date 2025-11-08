@@ -82,6 +82,47 @@ def _next_id(tokens, idx):
         return tokens[idx + 1]["val"]
     return None
 
+def _skip_balanced(tokens, j, open_sym, close_sym):
+    n = len(tokens)
+    if j >= n or tokens[j]["typ"] != "symbol" or tokens[j]["val"] != open_sym:
+        return j
+    depth = 0
+    while j < n:
+        t = tokens[j]
+        if t["typ"] == "symbol":
+            if t["val"] == open_sym:
+                depth += 1
+            elif t["val"] == close_sym:
+                depth -= 1
+                if depth == 0:
+                    return j + 1
+        j += 1
+    return j  # fallthrough if unbalanced; safe-ish
+
+def _id_after_qubit_or_bit(tokens, i):
+    """
+    For QASM 3 decls like:
+      qubit q;
+      qubit[5] q;
+      bit<angle[32]> c;      # allow optional type params
+    find the identifier that names the variable.
+    """
+    j = i + 1
+    n = len(tokens)
+
+    # optional size first: [ ... ]
+    if j < n and tokens[j]["typ"] == "symbol" and tokens[j]["val"] == "[":
+        j = _skip_balanced(tokens, j, "[", "]")
+
+    # optional type params: < ... >
+    if j < n and tokens[j]["typ"] == "symbol" and tokens[j]["val"] == "<":
+        j = _skip_balanced(tokens, j, "<", ">")
+
+    # now expect the identifier name
+    if j < n and tokens[j]["typ"] == "identifier":
+        return tokens[j]["val"]
+    return None
+
 def collect_declared_identifiers(tokens):
     """
     Returns a dict of type -> [names] for common QASM decls.
@@ -101,8 +142,14 @@ def collect_declared_identifiers(tokens):
         t = tokens[i]
         if t["typ"] == "keyword":
             kw = t["val"]
-            if kw in ("qreg", "creg", "qubit", "bit"):
+            if kw in ("qreg", "creg"):
+                # QASM 2: qreg ID [N];  -> name comes right after keyword
                 name = _next_id(tokens, i)
+                if name:
+                    out[kw].append(name)
+            elif kw in ("qubit", "bit"):
+                # QASM 3: qubit ID;  or qubit[N] ID;  (size before name)
+                name = _id_after_qubit_or_bit(tokens, i)
                 if name:
                     out[kw].append(name)
             elif kw in ("gate", "opaque"):
@@ -110,6 +157,7 @@ def collect_declared_identifiers(tokens):
                 if name:
                     out["gate"].append(name)
         i += 1
+
 
     # de-dup while keeping order
     for k, vals in out.items():
@@ -143,7 +191,7 @@ def main(argv=None):
                         help="Output newline-delimited JSON (one token per line).")
     parser.add_argument("--include", nargs="*", choices=sorted(set(TYPE_MAP.values())),
                         help="Only include these token types (identifier number string).")
-    parser.add_argument("--idents-of", nargs="*", choices=["qreg", "creg", "qubit", "bit", "gate"],
+    parser.add_argument("--idents-of", nargs="*", choices=["qreg", "h", "creg", "qubit", "bit", "gate"],
                         help="Only emit declared identifiers of these types ( qubit bit qreg).")
     args = parser.parse_args(argv)
 
