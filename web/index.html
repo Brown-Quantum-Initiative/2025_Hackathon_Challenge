@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graphical Quantum Circuit Viewer</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="graph.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Graphical Quantum Circuit Viewer (Team5)</h1>
+      <div class="header-actions">
+        <label class="upload-button">
+          <input type="file" id="file-upload" accept=".json" />
+          Upload Graph
+        </label>
+      </div>
+    </header>
+    <main class="site-main">
+      <div class="content">
+        <div class="graph-wrapper">
+          <svg id="graph" role="img" aria-label="Quantum circuit heterogeneous graph"></svg>
+          <div id="node-tooltip" class="node-tooltip" hidden></div>
+          <aside
+            id="graph-legend"
+            class="graph-legend"
+            aria-label="Node legend"
+            hidden
+          >
+            <h2 class="graph-legend__title">Node types</h2>
+            <ul class="graph-legend__list" role="list"></ul>
+          </aside>
+          
+          <div class="graph-controls">
+            <button type="button" id="play-toggle" class="play-toggle" aria-pressed="false">
+              &#9654;
+            </button>
+            <label for="time-slider">
+              Time step:
+              <span id="time-step-value">0</span>
+            </label>
+            <input
+              type="range"
+              id="time-slider"
+              name="time-slider"
+              min="0"
+              max="0"
+              value="0"
+              step="1"
+              disabled
+              aria-describedby="time-step-value"
+            />
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer">
+      <small>&copy; Hackathon Team5</small>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="graph.js"></script>
+  </body>
+</html>
+
