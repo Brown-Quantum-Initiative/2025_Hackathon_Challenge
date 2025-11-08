@@ -50,3 +50,9 @@ def tokenize(src: str):
                 i += 1
                 continue
 
+def main():
+    pass
+    #get file do the stuff
+
+if __name__ == "__main__":
+    main()
