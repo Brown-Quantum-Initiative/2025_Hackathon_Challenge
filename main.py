@@ -1,6 +1,7 @@
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit_ibm_runtime.fake_provider import FakeFez
 import qiskit.qasm3
+from qiskit.qasm3 import loads as qasm3_loads
 import numpy as np
 import matplotlib
 import re
@@ -110,49 +111,65 @@ class OptimizedTranspiler:
 
 def robust_load_qasm(path: Path) -> QuantumCircuit:
     """
-    Load a QASM file, auto-inserting missing header/qreg if needed.
-    - Ensures OPENQASM 2.0 + include "qelib1.inc";
-    - If no qreg is present, infers number of qubits from q[<idx>] usage
-      and inserts 'qreg q[N];'.
+    Load a QASM file and automatically patch common issues for QASM 2.0,
+    or parse directly for QASM 3.0.
     """
     path = Path(path)
-    text = path.read_text()
+    text = path.read_text(encoding='utf-8') # Specify encoding to avoid potential errors
 
-    # Ensure header
-    if "OPENQASM" not in text:
-        header = 'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
-        text = header + text
-    elif 'include "qelib1.inc";' not in text:
-        # Make sure we have the standard include
-        first_newline = text.find("\n")
-        if first_newline == -1:
-            first_newline = len(text)
-        text = text[:first_newline+1] + 'include "qelib1.inc";\n' + text[first_newline+1:]
+    if "OPENQASM 3.0;" in text:
+        try:
+            return qasm3_loads(text)
+        except Exception as e:
+            print(f"Error loading QASM 3.0 file {path}: {e}")
+            raise
+    else:
+        # Assume QASM 2.0 and apply patching
+        # Ensure a valid header
+        if "OPENQASM" not in text:
+            header = 'OPENQASM 2.0;\ninclude "qelib1.inc";\n'
+            text = header + text
+        elif 'include "qelib1.inc";' not in text:
+            first_newline = text.find("\n")
+            if first_newline == -1:
+                first_newline = len(text)
+            text = text[:first_newline+1] + 'include "qelib1.inc";\n' + text[first_newline+1:]
 
-    # If there's no qreg, infer from q[<idx>] usage
-    if "qreg" not in text:
-        indices = [int(m.group(1)) for m in re.finditer(r"q\[(\d+)\]", text)]
-        n_qubits = max(indices) + 1 if indices else 1
+        # Insert qreg if missing (only relevant for QASM 2.0)
+        if "qreg" not in text:
+            indices = [int(m.group(1)) for m in re.finditer(r"q\[(\d+)\]", text)]
+            n_qubits = max(indices) + 1 if indices else 1
+            # Find insertion point after includes
+            insert_pos = -1
+            if 'include "qelib1.inc";' in text:
+                insert_pos = text.find('include "qelib1.inc";')
+            elif 'OPENQASM 2.0;' in text:
+                insert_pos = text.find('OPENQASM 2.0;')
 
-        # Insert qreg after the include line if possible
-        insert_pos = text.find('include "qelib1.inc";')
-        if insert_pos != -1:
-            insert_pos = text.find("\n", insert_pos) + 1
-        else:
-            # Fallback: after the first line
-            insert_pos = text.find("\n") + 1
+            if insert_pos != -1:
+                insert_pos = text.find("\n", insert_pos) + 1
+            else: # Fallback if headers are completely missing and patched at start
+                insert_pos = text.find("\n") + 1 # After the first line
 
-        text = text[:insert_pos] + f"qreg q[{n_qubits}];\n" + text[insert_pos:]
+            if insert_pos == 0: # If there's only one line or no newlines at all
+                insert_pos = len(text)
 
-    # Now parse via Qiskit
-    return QuantumCircuit.from_qasm_str(text)
-
+            text = text[:insert_pos] + f"qreg q[{n_qubits}];\n" + text[insert_pos:]
+        try:
+            return QuantumCircuit.from_qasm_str(text)
+        except Exception as e:
+            print(f"Error loading QASM 2.0 file {path}: {e}")
+            raise
 
 ot = OptimizedTranspiler()
 qc1 = robust_load_qasm("big_circuits/1.qasm")
 qc2 = robust_load_qasm("big_circuits/2.qasm")
 qc3 = robust_load_qasm("big_circuits/3.qasm")
 
-qc1_seed = ot.try_seeds(circuit=qc1, seed=(0,1))
-qc2_seed = ot.try_seeds(circuit=qc2, seed=(0,1))
-qc3_seed = ot.try_seeds(circuit=qc3, seed=(0,1))
+qc1_seed = ot.try_seeds(circuit=qc1, seed=(0,1000))
+qc2_seed = ot.try_seeds(circuit=qc2, seed=(0,1000))
+qc3_seed = ot.try_seeds(circuit=qc3, seed=(0,1000))
+
+final1 = transpile(qc1, backend=FakeFez(), optimization_level=3, seed_transpiler=qc1_seed)
+final2 = transpile(qc2, backend=FakeFez(), optimization_level=3, seed_transpiler=qc2_seed)
+final3 = transpile(qc3, backend=FakeFez(), optimization_level=3, seed_transpiler=qc3_seed)
