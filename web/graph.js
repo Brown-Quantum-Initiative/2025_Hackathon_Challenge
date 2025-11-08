@@ -8,6 +8,119 @@ let currentTimeStep = null;
 let currentTransform = d3.zoomIdentity;
 let resizeFrame = null;
 let animationTimerId = null;
+let nodeTooltipElement = null;
+
+const NODE_TYPE_COLORS = Object.freeze({
+  qubit: "#2563eb",
+  classical_bit: "#0ea5e9",
+  single_qubit_gate: "#10b981",
+  one_quit_gate: "#8b5cf6",
+  two_qubit_gate: "#f97316",
+  measurement: "#dc2626",
+  default: "#6b7280"
+});
+
+const NODE_TYPE_LABELS = Object.freeze({
+  qubit: "Qubit",
+  classical_bit: "Classical bit",
+  single_qubit_gate: "Single-qubit gate",
+  one_quit_gate: "Continuous Single-qubit gate",
+  two_qubit_gate: "Two-qubit gate",
+  measurement: "Measurement",
+  default: "Other"
+});
+
+const NODE_TYPE_ORDER = Object.freeze([
+  "qubit",
+  "classical_bit",
+  "single_qubit_gate",
+  "one_quit_gate",
+  "two_qubit_gate",
+  "measurement",
+  "default"
+]);
+
+const FALLBACK_COLOR_SCALE =
+  typeof d3 !== "undefined" && typeof d3.scaleOrdinal === "function"
+    ? d3.scaleOrdinal(d3.schemeCategory10)
+    : null;
+
+function normalizeNodeType(type) {
+  return type ?? "default";
+}
+
+function getNodeColor(type) {
+  const normalizedType = normalizeNodeType(type);
+  if (Object.prototype.hasOwnProperty.call(NODE_TYPE_COLORS, normalizedType)) {
+    return NODE_TYPE_COLORS[normalizedType];
+  }
+  if (FALLBACK_COLOR_SCALE) {
+    return FALLBACK_COLOR_SCALE(normalizedType);
+  }
+  return NODE_TYPE_COLORS.default;
+}
+
+function getLegendLabel(type) {
+  const normalizedType = normalizeNodeType(type);
+  if (Object.prototype.hasOwnProperty.call(NODE_TYPE_LABELS, normalizedType)) {
+    return NODE_TYPE_LABELS[normalizedType];
+  }
+  const readableLabel = normalizedType.replace(/[_-]+/g, " ");
+  return readableLabel.charAt(0).toUpperCase() + readableLabel.slice(1);
+}
+
+function getLegendSortIndex(type) {
+  const normalizedType = normalizeNodeType(type);
+  const orderIndex = NODE_TYPE_ORDER.indexOf(normalizedType);
+  return orderIndex >= 0 ? orderIndex : NODE_TYPE_ORDER.length;
+}
+
+function updateLegend(nodes) {
+  const legend = document.getElementById("graph-legend");
+  if (!legend) {
+    return;
+  }
+
+  const list = legend.querySelector(".graph-legend__list");
+  if (!list) {
+    return;
+  }
+
+  const uniqueTypes = Array.from(
+    new Set(nodes.map(node => normalizeNodeType(node.type)))
+  ).sort((a, b) => {
+    const orderDelta = getLegendSortIndex(a) - getLegendSortIndex(b);
+    if (orderDelta !== 0) {
+      return orderDelta;
+    }
+    return getLegendLabel(a).localeCompare(getLegendLabel(b));
+  });
+
+  list.innerHTML = "";
+
+  if (!uniqueTypes.length) {
+    legend.setAttribute("hidden", "");
+    return;
+  }
+
+  legend.removeAttribute("hidden");
+  uniqueTypes.forEach(typeKey => {
+    const item = document.createElement("li");
+    item.className = "graph-legend__item";
+
+    const swatch = document.createElement("span");
+    swatch.className = "graph-legend__swatch";
+    swatch.style.backgroundColor = getNodeColor(typeKey);
+
+    const label = document.createElement("span");
+    label.className = "graph-legend__label";
+    label.textContent = getLegendLabel(typeKey);
+
+    item.appendChild(swatch);
+    item.appendChild(label);
+    list.appendChild(item);
+  });
+}
 
 function getBitInfo(bit) {
   const match = bit.match(/([a-zA-Z]+)\[(\d+)\]/);
@@ -22,6 +135,83 @@ function cloneGraph(graph) {
     nodes: graph.nodes.map(node => ({ ...node })),
     edges: graph.edges.map(edge => ({ ...edge }))
   };
+}
+
+function ensureNodeTooltipElement() {
+  if (nodeTooltipElement && nodeTooltipElement.isConnected) {
+    return nodeTooltipElement;
+  }
+
+  nodeTooltipElement = document.getElementById("node-tooltip");
+  if (nodeTooltipElement && nodeTooltipElement.isConnected) {
+    return nodeTooltipElement;
+  }
+
+  const wrapper = document.querySelector(".graph-wrapper");
+  if (!wrapper) {
+    return null;
+  }
+
+  nodeTooltipElement = document.createElement("div");
+  nodeTooltipElement.id = "node-tooltip";
+  nodeTooltipElement.className = "node-tooltip";
+  nodeTooltipElement.setAttribute("hidden", "");
+  wrapper.appendChild(nodeTooltipElement);
+  return nodeTooltipElement;
+}
+
+function positionNodeTooltip(event) {
+  const tooltip = ensureNodeTooltipElement();
+  if (!tooltip) {
+    return;
+  }
+
+  const wrapper = document.querySelector(".graph-wrapper");
+  if (!wrapper) {
+    return;
+  }
+
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const pointerX = event.clientX - wrapperRect.left;
+  const pointerY = event.clientY - wrapperRect.top;
+
+  tooltip.style.left = `${pointerX}px`;
+  tooltip.style.top = `${pointerY}px`;
+}
+
+function showNodeTooltip(event, nodeDatum) {
+  const tooltip = ensureNodeTooltipElement();
+  if (!tooltip) {
+    return;
+  }
+
+  tooltip.replaceChildren();
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "node-tooltip__title";
+  titleEl.textContent = nodeDatum.name ?? nodeDatum.id ?? "Continuous gate";
+  tooltip.appendChild(titleEl);
+
+  if (nodeDatum.gate_info) {
+    const infoEl = document.createElement("div");
+    infoEl.className = "node-tooltip__info";
+    infoEl.textContent = nodeDatum.gate_info;
+    tooltip.appendChild(infoEl);
+  }
+
+  tooltip.classList.add("is-visible");
+  tooltip.removeAttribute("hidden");
+  positionNodeTooltip(event);
+}
+
+function hideNodeTooltip() {
+  const tooltip = ensureNodeTooltipElement();
+  if (!tooltip) {
+    return;
+  }
+
+  tooltip.classList.remove("is-visible");
+  tooltip.setAttribute("hidden", "");
 }
 
 class QasmParser {
@@ -347,7 +537,8 @@ function renderGraph(data) {
     throw new Error("Graph data is missing nodes.");
   }
 
-  const color = d3.scaleOrdinal(d3.schemeCategory10);
+  hideNodeTooltip();
+
   const simulation = createSimulation(nodes, links);
   const svg = initSvg(width, height);
   const viewport = svg.append("g").attr("class", "graph-viewport");
@@ -363,8 +554,6 @@ function renderGraph(data) {
 
   svg.call(zoomBehavior).on("dblclick.zoom", null);
   svg.call(zoomBehavior.transform, currentTransform);
-
-  const resolveColor = d => color(d.type ?? "default");
 
   const link = viewport
     .append("g")
@@ -388,7 +577,7 @@ function renderGraph(data) {
     .join("circle")
     .attr("r", 12)
     .attr("fill", d => {
-      d.__baseColor = resolveColor(d);
+      d.__baseColor = getNodeColor(d.type);
       return d.__baseColor;
     })
     .call(
@@ -400,8 +589,23 @@ function renderGraph(data) {
     );
 
   node
-    .on("mouseenter", (event, target) => setHighlightState(target, true))
-    .on("mouseleave", (event, target) => setHighlightState(target, false));
+    .on("mouseenter", (event, target) => {
+      setHighlightState(target, true);
+      if (target.type === "one_quit_gate") {
+        showNodeTooltip(event, target);
+      } else {
+        hideNodeTooltip();
+      }
+    })
+    .on("mousemove", (event, target) => {
+      if (target.type === "one_quit_gate") {
+        positionNodeTooltip(event);
+      }
+    })
+    .on("mouseleave", (event, target) => {
+      setHighlightState(target, false);
+      hideNodeTooltip();
+    });
 
   node.append("title").text(d => {
     const labelParts = [d.name ?? d.id];
@@ -410,6 +614,8 @@ function renderGraph(data) {
     }
     return labelParts.join("\n");
   });
+
+  updateLegend(nodes);
 
   const label = viewport
     .append("g")

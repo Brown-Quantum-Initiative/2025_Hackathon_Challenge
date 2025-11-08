@@ -297,6 +297,54 @@ class QASM_Parser:
                     graph_updated = True
                     # ------------------------------------------------
                     
+                elif len(parts) == 4:
+                    gate_type = "two_qubit_gate"
+                    gate_name = parts[0]
+                    bit1 = parts[1].strip().rstrip(';')
+                    bit2 = parts[2].strip().rstrip(';')
+                    bit3 = parts[3].strip().rstrip(';')
+                    letter1, number1 = get_bit_info(bit1)
+                    letter2, number2 = get_bit_info(bit2)
+                    letter3, number3 = get_bit_info(bit3)
+                    if None in (letter1, number1, letter2, number2, letter3, number3):
+                        raise ValueError(f"Unrecognized bit format in line: '{line}'")
+                    gate_id = f"g_{self.gate_id_counter}"
+                    self.gates.append({"id": gate_id, "type": gate_type, "name": gate_name})
+                    self.gate_id_counter += 1
+
+                    last_gate_connected1 = self.bits[f"{letter1}{number1}"]["last_gate_connected"]
+                    last_gate_connected2 = self.bits[f"{letter2}{number2}"]["last_gate_connected"]
+                    last_gate_connected3 = self.bits[f"{letter3}{number3}"]["last_gate_connected"]
+                    if last_gate_connected1 is None:
+                        source1 = f"{letter1}{number1}"
+                    else: 
+                        source1 = last_gate_connected1
+                    if last_gate_connected2 is None:
+                        source2 = f"{letter2}{number2}"
+                    else: 
+                        source2 = last_gate_connected2
+                    if last_gate_connected3 is None:
+                        source3 = f"{letter3}{number3}"
+                    else: 
+                        source3 = last_gate_connected3
+                    self.links.append({"source": source1, "target": gate_id})
+                    self.links.append({"source": source2, "target": gate_id})
+                    self.links.append({"source": source3, "target": gate_id})
+                    self.bits[f"{letter1}{number1}"]["last_gate_connected"] = gate_id
+                    self.bits[f"{letter2}{number2}"]["last_gate_connected"] = gate_id
+                    self.bits[f"{letter3}{number3}"]["last_gate_connected"] = gate_id
+
+                    # ------------------------------------------------
+                    current_graph["nodes"].append({"id": gate_id, 
+                                                        "type": gate_type, 
+                                                        "name": gate_name, 
+                                                        })
+                    current_graph["edges"].append({"source": source1, "target": gate_id})
+                    current_graph["edges"].append({"source": source2, "target": gate_id})
+                    current_graph["edges"].append({"source": source3, "target": gate_id})
+                    graph_updated = True
+                    # ------------------------------------------------
+
                 else:
                     continue 
 
@@ -310,7 +358,7 @@ class QASM_Parser:
                 
 
 if __name__ == "__main__":
-    parser = QASM_Parser("parser/3.qasm")
+    parser = QASM_Parser("qasm_files/2.qasm")
     parser.get_bits()
     parser.get_gates()
-    parser.save_json("parser/graph3.json")
+    parser.save_json("parser/graph2.json")

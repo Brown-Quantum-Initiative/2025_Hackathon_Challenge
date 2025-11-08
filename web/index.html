@@ -21,6 +21,16 @@
       <div class="content">
         <div class="graph-wrapper">
           <svg id="graph" role="img" aria-label="Quantum circuit heterogeneous graph"></svg>
+          <div id="node-tooltip" class="node-tooltip" hidden></div>
+          <aside
+            id="graph-legend"
+            class="graph-legend"
+            aria-label="Node legend"
+            hidden
+          >
+            <h2 class="graph-legend__title">Node types</h2>
+            <ul class="graph-legend__list" role="list"></ul>
+          </aside>
           
           <div class="graph-controls">
             <button type="button" id="play-toggle" class="play-toggle" aria-pressed="false">
