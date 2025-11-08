@@ -123,6 +123,19 @@ def collect_declared_identifiers(tokens):
     return out
 
 def main(argv=None):
+
+    '''
+    Usage:
+    python qasm_parser.py "qft.qasm" --idents-of qubit
+
+    should return something like:
+    [
+        { "typ": "qreg", "val": "q" },
+        { "typ": "qubit", "val": "q0" }
+    ]
+
+    '''
+
     parser = argparse.ArgumentParser(description="Tokenize a .qasm file and produce JSON.")
     parser.add_argument("path", nargs="?", default="-",
                         help="Path to .qasm file, or '-' to read from stdin")
