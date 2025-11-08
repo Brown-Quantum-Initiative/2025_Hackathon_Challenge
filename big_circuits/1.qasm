@@ -1,6 +1,10 @@
-OPENQASM 3.0;
-include "stdgates.inc";
-qubit[44] q;
+OPENQASM 2.0;
+include "qelib1.inc";
+
+// Define the 44-qubit quantum register
+qreg q[44];
+
+// --- Initial X gates (State Preparation) ---
 x q[43];
 x q[42];
 x q[41];
@@ -33,6 +37,8 @@ x q[15];
 x q[14];
 x q[13];
 x q[12];
+
+// --- Circuit Operations (CX is converted to cx) ---
 cx q[28], q[29];
 cx q[34], q[35];
 x q[29];
