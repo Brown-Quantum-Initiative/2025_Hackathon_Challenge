@@ -1,0 +1,28 @@
+.content {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+.intro {
+  margin: 0;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background-color: #fff;
+  box-shadow: 0 1.25rem 2.5rem -2rem rgba(15, 23, 42, 0.4);
+}
+
+.graph-wrapper {
+  background-color: #fff;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+#graph {
+  width: 100%;
+  height: min(480px, 70vh);
+  font-family: inherit;
+}
+

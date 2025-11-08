@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "q0", "type": "qubit", "name": "q0"},
+    { "id": "q1", "type": "qubit", "name": "q1"},
+    { "id": "h0", "type": "gate", "name": "H"},
+    { "id": "cx01", "type": "gate", "name": "CX"},
+    { "id": "m0", "type": "measurement", "name": "m0"},
+    { "id": "m1", "type": "measurement", "name": "m1"},
+    { "id": "c0", "type": "classical_bit", "name": "c0"},
+    { "id": "c1", "type": "classical_bit", "name": "c1"}
+  ],
+  "edges": [
+    { "source": "q0", "target": "h0"},
+    { "source": "h0", "target": "q0"},
+    { "source": "q0", "target": "cx01"},
+    { "source": "q1", "target": "cx01"},
+    { "source": "cx01", "target": "q1"},
+    { "source": "q0", "target": "m0"},
+    { "source": "q1", "target": "m1"},
+    { "source": "m0", "target": "c0"},
+    { "source": "m1", "target": "c1"}
+  ]
+}
+

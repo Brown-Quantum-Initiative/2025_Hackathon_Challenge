@@ -1,0 +1,34 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  color: #222;
+  background-color: #f4f6fb;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.site-header {
+  text-align: center;
+  padding: 1rem 1rem;
+  background-color: #4b5563;
+  color: #fff;
+}
+
+.site-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #4b5563;
+  color: #fff;
+}
+
+
+.site-main {
+  flex: 1;
+  padding: 2rem 1rem 3rem;
+}
+
