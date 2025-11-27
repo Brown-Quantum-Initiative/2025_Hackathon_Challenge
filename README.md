@@ -52,9 +52,11 @@ Professor CNOTworthy has given Bruno **three massive quantum circuits**, each us
 
 ---
 
-### ⁉️ Hidden Challenge
+### ⁉️ Hidden Challenge(s)
 
-This challenge will be revealed later in the day.
+Additional requirements—some mandatory, some optional—and challenge modifiers will be revealed throughout the day via our Discord channel.
+
+Edit: The 2 additional requirements, 2 modifiers, and 1 optional sidequest that were released throughout the competition been copied from Discord into the [extra](/extra.md) file.
 
 ---
 
