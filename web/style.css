@@ -1,0 +1,81 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  color: #222;
+  background-color: #f4f6fb;
+  --header-height: 68px;
+  --footer-height: 56px;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background-color: inherit;
+}
+
+.site-header,
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem;
+  color: #fff;
+  background-color: #4b5563;
+}
+
+.site-header {
+  height: var(--header-height);
+  justify-content: space-between;
+}
+
+.site-header h1 {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  color: #fff;
+  box-shadow: 0 0.5rem 1.5rem -1rem rgba(14, 165, 233, 0.8);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.75rem 2rem -1.1rem rgba(14, 165, 233, 0.9);
+}
+
+.upload-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.site-footer {
+  height: var(--footer-height);
+}
+
+.site-main {
+  flex: 1;
+  padding: 0;
+  display: flex;
+}
+

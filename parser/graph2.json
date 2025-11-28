@@ -1,0 +1,66 @@
+{
+    "0": {
+        "nodes": [
+            {
+                "id": "q0",
+                "type": "qubit",
+                "name": "q0",
+                "last_gate_connected": null
+            },
+            {
+                "id": "q1",
+                "type": "qubit",
+                "name": "q1",
+                "last_gate_connected": null
+            },
+            {
+                "id": "q2",
+                "type": "qubit",
+                "name": "q2",
+                "last_gate_connected": null
+            }
+        ],
+        "edges": []
+    },
+    "1": {
+        "nodes": [
+            {
+                "id": "q0",
+                "type": "qubit",
+                "name": "q0",
+                "last_gate_connected": "g_0"
+            },
+            {
+                "id": "q1",
+                "type": "qubit",
+                "name": "q1",
+                "last_gate_connected": "g_0"
+            },
+            {
+                "id": "q2",
+                "type": "qubit",
+                "name": "q2",
+                "last_gate_connected": "g_0"
+            },
+            {
+                "id": "g_0",
+                "type": "two_qubit_gate",
+                "name": "ccx"
+            }
+        ],
+        "edges": [
+            {
+                "source": "q0",
+                "target": "g_0"
+            },
+            {
+                "source": "q1",
+                "target": "g_0"
+            },
+            {
+                "source": "q2",
+                "target": "g_0"
+            }
+        ]
+    }
+}
